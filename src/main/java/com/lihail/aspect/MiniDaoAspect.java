@@ -7,14 +7,14 @@ import org.aspectj.lang.annotation.Pointcut;
 @Aspect
 public class MiniDaoAspect {
 	
-	@Pointcut("execution(** com.lihail.repository.EmployeeDao.count(..))")
-	public void count() {
-		
-	}
-	
-	@Before("count()")
-	public void initCount() {
-		System.out.println("initCount.....");
-	}
+//	@Pointcut("execution(** com.lihail.repository.EmployeeDao.count(..))")
+//	public void count() {
+//		
+//	}
+//	
+//	@Before("count()")
+//	public void initCount() {
+//		System.out.println("initCount.....");
+//	}
 
 }

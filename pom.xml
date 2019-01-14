@@ -57,39 +57,55 @@
 		<scope>compile</scope>
     </dependency>
     <dependency>
-         <groupId>org.hibernate</groupId>
-         <artifactId>hibernate-core</artifactId>
-         <version>4.3.6.Final</version>
+        <groupId>org.hibernate</groupId>
+        <artifactId>hibernate-core</artifactId>
+        <version>4.3.6.Final</version>
     </dependency>
     <dependency>
-         <groupId>org.hibernate</groupId>
-         <artifactId>hibernate-entitymanager</artifactId>
-         <version>4.3.6.Final</version>
-    </dependency>
-    <dependency>
-         <groupId>org.springframework.data</groupId>
-         <artifactId>spring-data-jpa</artifactId>
-         <version>1.7.0.RELEASE</version>
-    </dependency>
+        <groupId>org.hibernate</groupId>
+        <artifactId>hibernate-entitymanager</artifactId>
+        <version>4.3.6.Final</version>
+   	</dependency>
+   	<dependency>
+       	<groupId>org.springframework.data</groupId>
+        <artifactId>spring-data-jpa</artifactId>
+        <version>1.7.0.RELEASE</version>
+        <exclusions>
+        	<exclusion>
+        		<groupId>org.slf4j</groupId>
+        		<artifactId>jcl-over-slf4j</artifactId>
+        	</exclusion>
+        </exclusions>
+   	</dependency>
     <dependency>
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
         <version>1.4.192</version>
-   </dependency>
-   <dependency>
+    </dependency>
+    <dependency>
 		<groupId>com.alibaba</groupId>
 		<artifactId>druid</artifactId>
 		<version>1.1.9</version>
-   </dependency>
-   <dependency>
+    </dependency>
+    <dependency>
 		<groupId>mysql</groupId>
 		<artifactId>mysql-connector-java</artifactId>
 		<version>5.0.5</version>
-   </dependency>
-   <dependency>
+    </dependency>
+    <dependency>
 		<groupId>org.aspectj</groupId>
 		<artifactId>aspectjweaver</artifactId>
 		<version>1.8.4</version>
-   </dependency>
+    </dependency>
+    <dependency>
+		<groupId>log4j</groupId>
+		<artifactId>log4j</artifactId>
+		<version>1.2.16</version>
+	</dependency>
+	<dependency>
+		<groupId>org.freemarker</groupId>
+		<artifactId>freemarker</artifactId>
+		<version>2.3.19</version>
+	</dependency>
   </dependencies>
 </project>
