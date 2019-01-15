@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -13,6 +14,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +31,7 @@ import org.springframework.util.ObjectUtils;
 
 import com.lihail.annotation.DynamicSql;
 import com.lihail.annotation.MyParam;
+import com.lihail.annotation.Modify;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -46,32 +50,32 @@ public class MiniDaoHandler implements InvocationHandler{
 		String sql = "";
 		Class<?> returnType = method.getReturnType();
 		
+		Map<String,Object> paramMap = new HashMap<String, Object>();
+		Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+		for (int i = 0; i < parameterAnnotations.length; i++) {
+			Annotation[] annotations = parameterAnnotations[i];
+			for (Annotation annotation : annotations) {
+				if (annotation.annotationType().equals(MyParam.class)) {
+					MyParam myParam = (MyParam)annotation;
+					String value = myParam.value();
+					paramMap.put(value, args[i]);
+				}
+			}
+		}
+		
 		if (method.isAnnotationPresent(DynamicSql.class)) {
 			sql = method.getAnnotation(DynamicSql.class).value();
+			
 			if (!ObjectUtils.isEmpty(sql)) {
-				String key = "";
-				String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+"; // 表示以：开头，[0-9或者.或者A-Z大小都写]的任意字符，超过一个
-				Pattern pat = Pattern.compile(regEx);
-				Matcher m = pat.matcher(sql);
-				Map<String,Object> paramMap = new HashMap<String, Object>();
-				while (m.find()) {
-					log.info(" Match [" + m.group() + "] at positions " + m.start() + "-" + (m.end() - 1));
-					key = m.group().replace(":", "").trim();
-					log.info(" --- minidao --- 解析参数 --- " + key);
-					Annotation[][] parameterAnnotations = method.getParameterAnnotations();
-					for (int i = 0; i < parameterAnnotations.length; i++) {
-						Annotation[] annotations = parameterAnnotations[i];
-						for (Annotation annotation : annotations) {
-							if (annotation.annotationType().equals(MyParam.class)) {
-								MyParam myParam = (MyParam)annotation;
-								String value = myParam.value();
-								if (value.equals(key)) {
-									paramMap.put(key, args[i]);
-								}
-							}
-						}
-					}
-				}
+//				String key = "";
+//				String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+"; // 表示以：开头，[0-9或者.或者A-Z大小都写]的任意字符，超过一个
+//				Pattern pat = Pattern.compile(regEx);
+//				Matcher m = pat.matcher(sql);
+//				while (m.find()) {
+//					log.info(" Match [" + m.group() + "] at positions " + m.start() + "-" + (m.end() - 1));
+//					key = m.group().replace(":", "").trim();
+//					log.info(" --- minidao --- 解析参数 --- " + key);
+//				}
 				
 				System.out.println(method.getGenericReturnType().getTypeName());
 				
@@ -88,14 +92,14 @@ public class MiniDaoHandler implements InvocationHandler{
 					String className = typeName.substring(typeName.indexOf("<")+1, typeName.indexOf(">"));
 					
 					if (className.indexOf("Map") > 0) {
-						return jdbcTemplate.queryForList(sql, paramMap);
-					}
-					
-					BeanPropertyRowMapper<?> beanPropertyRowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
-					if (!CollectionUtils.isEmpty(paramMap)) {
-						return namedParameterJdbcTemplate.query(sql, paramMap, beanPropertyRowMapper);
+						return jdbcTemplate.queryForList(sql, args);
 					}else {
-						return jdbcTemplate.queryForList(sql, beanPropertyRowMapper);
+						BeanPropertyRowMapper<?> beanPropertyRowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
+						if (!CollectionUtils.isEmpty(paramMap)) {
+							return namedParameterJdbcTemplate.query(sql, paramMap, beanPropertyRowMapper);
+						}else {
+							return jdbcTemplate.queryForList(sql, beanPropertyRowMapper);
+						}
 					}
 				} else {
 					if (!CollectionUtils.isEmpty(paramMap)) {
@@ -105,10 +109,29 @@ public class MiniDaoHandler implements InvocationHandler{
 					}
 				}
 			} else {
-				sql = getSql(method);
+				sql = getSql(method, paramMap);
 			}
-		} else {
-			sql = getSql(method);
+		} else if (method.isAnnotationPresent(Modify.class)) {
+			if (!CollectionUtils.isEmpty(paramMap)) {
+				return namedParameterJdbcTemplate.update(sql, paramMap);
+			} else {
+				return jdbcTemplate.update(sql);
+			}
+		} else if (returnType.isAssignableFrom(List.class)) {
+			sql = getSql(method, paramMap);
+			if (args.length == 1) {
+				Object object = args[0].getClass().newInstance();
+				Field[] declaredFields = object.getClass().getDeclaredFields();
+				for (Field field : declaredFields) {
+					field.setAccessible(true);
+					field.get(obj)
+				}
+				System.out.println(args[0].getClass().newInstance().toString());
+			} else {
+				
+			}
+			BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(returnType);
+			return namedParameterJdbcTemplate.queryForObject(sql, paramMap, rowMapper);
 		}
 		
 		return jdbcTemplate.queryForObject(sql, returnType);
@@ -120,17 +143,14 @@ public class MiniDaoHandler implements InvocationHandler{
 	 * @throws IOException
 	 * @throws TemplateException
 	 */
-	private String getSql(Method method) throws IOException, TemplateException {
+	private String getSql(Method method,Map<String, Object> paramMap) throws IOException, TemplateException {
 		Class<?> clazz = method.getDeclaringClass();
 		String sqlName = clazz.getSimpleName()+"_"+method.getName()+".sql";
 		Configuration config = new Configuration();
-		
 		config.setDirectoryForTemplateLoading(new File(clazz.getResource("").getFile()+File.separator+"sql"));
-		
 		Template template = config.getTemplate(sqlName);
-		
 		StringWriter writer = new StringWriter();
-		template.process(null, writer);
+		template.process(paramMap, writer);
 		return writer.toString();
 	}
 }

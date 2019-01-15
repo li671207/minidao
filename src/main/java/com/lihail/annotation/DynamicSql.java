@@ -9,5 +9,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface DynamicSql {
 	
-	String value() default "";
+	String value();
 }
