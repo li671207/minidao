@@ -7,6 +7,8 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import com.lihail.dict.ModifyType;
+
 /**
  * 执行新增、修改、删除操作
  * @author lihl
@@ -16,5 +18,7 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Target(METHOD)
 public @interface Modify {
+	
+	 ModifyType value() default ModifyType.UPDATE;
 
 }

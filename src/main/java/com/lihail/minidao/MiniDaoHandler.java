@@ -31,6 +31,7 @@ import org.springframework.util.ObjectUtils;
 
 import com.lihail.annotation.DynamicSql;
 import com.lihail.annotation.MyParam;
+import com.lihail.dict.DbType;
 import com.lihail.annotation.Modify;
 
 import freemarker.template.Configuration;
@@ -46,10 +47,18 @@ public class MiniDaoHandler implements InvocationHandler{
 	@Autowired
 	private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 	
+	private DbType dbType;
+	
+	public void setDbType(DbType dbType) {
+		this.dbType = dbType;
+	}
+	
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		System.out.println(dbType);
 		String sql = "";
+		String returnTypeName = method.getGenericReturnType().getTypeName();
 		Class<?> returnType = method.getReturnType();
-		
+		log.info("===returnTypeName==="+returnTypeName);
 		Map<String,Object> paramMap = new HashMap<String, Object>();
 		Annotation[][] parameterAnnotations = method.getParameterAnnotations();
 		for (int i = 0; i < parameterAnnotations.length; i++) {
@@ -77,7 +86,7 @@ public class MiniDaoHandler implements InvocationHandler{
 //					log.info(" --- minidao --- 解析参数 --- " + key);
 //				}
 				
-				System.out.println(method.getGenericReturnType().getTypeName());
+				log.info(method.getGenericReturnType().getTypeName());
 				
 				BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(returnType);
 				
@@ -88,14 +97,14 @@ public class MiniDaoHandler implements InvocationHandler{
 						return jdbcTemplate.queryForObject(sql, rowMapper);
 					}
 				} else if (returnType.isAssignableFrom(List.class)) {
-					String typeName = method.getGenericReturnType().getTypeName();
-					String className = typeName.substring(typeName.indexOf("<")+1, typeName.indexOf(">"));
+					String className = returnTypeName.substring(returnTypeName.indexOf("<")+1, returnTypeName.indexOf(">"));
 					
 					if (className.indexOf("Map") > 0) {
 						return jdbcTemplate.queryForList(sql, args);
 					}else {
 						BeanPropertyRowMapper<?> beanPropertyRowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
 						if (!CollectionUtils.isEmpty(paramMap)) {
+//							return namedParameterJdbcTemplate.queryForList(sql, paramMap, returnType);
 							return namedParameterJdbcTemplate.query(sql, paramMap, beanPropertyRowMapper);
 						}else {
 							return jdbcTemplate.queryForList(sql, beanPropertyRowMapper);
@@ -118,20 +127,42 @@ public class MiniDaoHandler implements InvocationHandler{
 				return jdbcTemplate.update(sql);
 			}
 		} else if (returnType.isAssignableFrom(List.class)) {
-			sql = getSql(method, paramMap);
-			if (args.length == 1) {
-				Object object = args[0].getClass().newInstance();
-				Field[] declaredFields = object.getClass().getDeclaredFields();
-				for (Field field : declaredFields) {
-					field.setAccessible(true);
-					field.get(obj)
+			
+			String typeName = method.getGenericReturnType().getTypeName();
+			String className = typeName.substring(typeName.indexOf("<")+1, typeName.indexOf(">"));
+			
+			if (className.indexOf("Map") > 0) {
+				return jdbcTemplate.queryForList(sql, args);
+			}else {
+				String paramName = "";
+				Parameter[] parameters = method.getParameters();
+				for (Parameter parameter : parameters) {
+					if (parameter.isAnnotationPresent(MyParam.class)) {
+						paramName = parameter.getAnnotation(MyParam.class).value();
+					}
 				}
-				System.out.println(args[0].getClass().newInstance().toString());
-			} else {
+				Object object = args[0];
+				Field[] fields = args[0].getClass().getDeclaredFields();
+				Map<String, Object> modle = new HashMap<>();
+				for (Field field : fields) {
+					field.setAccessible(true);
+					modle.put(paramName+"."+field.getName(), field.get(object));
+				}
+				log.info("===modle==="+modle);
+				sql = getSql(method, paramMap);
+				log.info("===sql==="+sql);
+				String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+";
+				Pattern compile = Pattern.compile(regEx);
+				Matcher matcher = compile.matcher(sql);
+				while (matcher.find()) {
+					String key = matcher.group().replaceFirst(":", "");
+					paramMap.put(key, modle.get(key));
+				}
+				log.info("===paramMap==="+paramMap);
+				BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
 				
+				return namedParameterJdbcTemplate.query(sql, paramMap, rowMapper);
 			}
-			BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(returnType);
-			return namedParameterJdbcTemplate.queryForObject(sql, paramMap, rowMapper);
 		}
 		
 		return jdbcTemplate.queryForObject(sql, returnType);
@@ -143,14 +174,15 @@ public class MiniDaoHandler implements InvocationHandler{
 	 * @throws IOException
 	 * @throws TemplateException
 	 */
-	private String getSql(Method method,Map<String, Object> paramMap) throws IOException, TemplateException {
+	private String getSql(Method method,Object object) throws IOException, TemplateException {
 		Class<?> clazz = method.getDeclaringClass();
 		String sqlName = clazz.getSimpleName()+"_"+method.getName()+".sql";
 		Configuration config = new Configuration();
 		config.setDirectoryForTemplateLoading(new File(clazz.getResource("").getFile()+File.separator+"sql"));
 		Template template = config.getTemplate(sqlName);
 		StringWriter writer = new StringWriter();
-		template.process(paramMap, writer);
+		template.process(object, writer);
 		return writer.toString();
 	}
+	
 }

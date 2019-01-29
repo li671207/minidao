@@ -10,4 +10,3 @@
 <#if (employee.salary)??>
 	and salary = :employee.salary
 </#if>
-<#include "">

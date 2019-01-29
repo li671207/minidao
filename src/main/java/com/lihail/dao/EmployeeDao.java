@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import com.lihail.annotation.DynamicSql;
 import com.lihail.annotation.MyParam;
+import com.lihail.dict.ModifyType;
 import com.lihail.annotation.Modify;
 import com.lihail.entity.EmployeeEntity;
 
@@ -21,13 +22,17 @@ public interface EmployeeDao {
 	@DynamicSql("select * from employee where name=:name")
 	List<EmployeeEntity> findEmployees(@MyParam("name") String name);
 	
-	@DynamicSql("select * from employee where name= ?")
-	List<Map<String, Object>> findEmployeeMaps(@MyParam("name") String name);
+	@DynamicSql("select * from employee where name = ? or age = ?")
+	List<Map<String, Object>> findEmployeeMaps(String name, String age);
 	
-	List<EmployeeEntity> findAll(@MyParam("employee") EmployeeEntity employeeEntity);
+	List<EmployeeEntity> selectEmployees(@MyParam("employee") EmployeeEntity employeeEntity);
 	
-	@Modify
+	@Modify()
+	int update(EmployeeEntity employeeEntity);
+	
+	@Modify(ModifyType.INSERT)
 	int save(EmployeeEntity employeeEntity);
-	@Modify
+	
+	@Modify(ModifyType.DELETE)
 	int delete(@MyParam("id") String id);
 }

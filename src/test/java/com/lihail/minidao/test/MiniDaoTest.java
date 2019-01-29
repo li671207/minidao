@@ -37,29 +37,13 @@ public class MiniDaoTest extends AbstractJUnit4SpringContextTests{
 //		System.out.println("===count====："+employeeDao.count());
 //		System.out.println("====findEmployees===："+employeeDao.findEmployees("scott"));
 //		System.out.println("====findById===："+employeeDao.findById("8496381811DD4A2084439D3DF01512B6"));
-//		System.out.println("====findEmployeeMaps===："+employeeDao.findEmployeeMaps("scott"));
+//		System.out.println("====findEmployeeMaps===："+employeeDao.findEmployeeMaps("scott","25"));
 		
 		EmployeeEntity employeeEntity = new EmployeeEntity();
 		employeeEntity.setAge("20");
 		employeeEntity.setName("scott");
-		System.out.println("====findAll===："+employeeDao.findAll(employeeEntity));
+		System.out.println("====selectEmployees===："+employeeDao.selectEmployees(employeeEntity));
 		
 //		System.out.println(employeeRepository.findById("8496381811DD4A2084439D3DF01512B6"));
-//		KeyHolder keyHolder = new GeneratedKeyHolder();
-		//INSERT INTO employee ( id ,empno ,NAME ,AGE ,BIRTHDAY ,SALARY ,create_by ,create_date ,update_by ,update_date ) values ( :employee.id ,:employee.empno ,:employee.name ,:employee.age ,:employee.birthday ,:employee.salary ,:employee.createBy ,:employee.createDate ,:employee.updateBy ,:employee.updateDate )
-		//{employee.id=null, employee.empno=200, employee.age=20, employee.createDate=Sat Jan 05 16:13:57 GMT+08:00 2019, employee.name=scott, employee.birthday=Sat Jan 05 16:13:57 GMT+08:00 2019, employee.salary=88888, employee.createBy=scott, employee.updateBy=null, employee.updateDate=null}
-//		jdbcTemplate.update("insert into employee2 (id,name) values ('"+ UUID.randomUUID().toString() +"','test1')");
-//		employeeDao.count();
-//		System.out.println(jdbcTemplate.queryForList("select * from employee2"));
-//		System.out.println(employeeRepository.findAll());
-//		jdbcTemplate.update("insert into employee2 (name) values ('ccc')");
-//		HashMap<String, Object> paramMap = new HashMap<String, Object>();
-//		paramMap.put("name", "generateId");
-//		MapSqlParameterSource paramSource = new MapSqlParameterSource(paramMap); 
-//		namedParameterJdbcTemplate.update("insert into employee2 (name) values (:name)", paramSource, keyHolder, new String[] {"id"});
-//		System.out.println(keyHolder.getKey());
-//		EmployeeEntity entity = new EmployeeEntity();
-//		entity.setName("测试");
-//		employeeRepository.save(entity);
 	}
 }
