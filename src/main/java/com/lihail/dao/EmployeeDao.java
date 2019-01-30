@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import com.lihail.annotation.DynamicSql;
 import com.lihail.annotation.MyParam;
+import com.lihail.annotation.Paging;
 import com.lihail.dict.ModifyType;
 import com.lihail.annotation.Modify;
 import com.lihail.entity.EmployeeEntity;
@@ -26,6 +27,9 @@ public interface EmployeeDao {
 	List<Map<String, Object>> findEmployeeMaps(String name, String age);
 	
 	List<EmployeeEntity> selectEmployees(@MyParam("employee") EmployeeEntity employeeEntity);
+	
+	@Paging
+	List<EmployeeEntity> selectEmployees(@MyParam("employee") EmployeeEntity employeeEntity, int page, int count);
 	
 	@Modify()
 	int update(EmployeeEntity employeeEntity);
