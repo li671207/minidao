@@ -9,6 +9,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,9 +29,11 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import com.lihail.annotation.DynamicSql;
 import com.lihail.annotation.MyParam;
+import com.lihail.annotation.Paging;
 import com.lihail.dict.DbType;
 import com.lihail.annotation.Modify;
 
@@ -54,7 +57,6 @@ public class MiniDaoHandler implements InvocationHandler{
 	}
 	
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-		System.out.println(dbType);
 		String sql = "";
 		String returnTypeName = method.getGenericReturnType().getTypeName();
 		Class<?> returnType = method.getReturnType();
@@ -71,54 +73,78 @@ public class MiniDaoHandler implements InvocationHandler{
 				}
 			}
 		}
+		log.info(method.getGenericReturnType().getTypeName());
 		
-		if (method.isAnnotationPresent(DynamicSql.class)) {
-			sql = method.getAnnotation(DynamicSql.class).value();
+		BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(returnType);
+		if (returnType.isPrimitive()) {
+			if (!CollectionUtils.isEmpty(paramMap)) {
+				return namedParameterJdbcTemplate.query(sql, paramMap, rowMapper);
+			} else {
+				return jdbcTemplate.queryForObject(sql, rowMapper);
+			}
+		} else if (returnType.isAssignableFrom(List.class)) {
+
+			String typeName = method.getGenericReturnType().getTypeName();
+			String className = typeName.substring(typeName.indexOf("<")+1, typeName.indexOf(">"));
 			
-			if (!ObjectUtils.isEmpty(sql)) {
-//				String key = "";
-//				String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+"; // 表示以：开头，[0-9或者.或者A-Z大小都写]的任意字符，超过一个
-//				Pattern pat = Pattern.compile(regEx);
-//				Matcher m = pat.matcher(sql);
-//				while (m.find()) {
-//					log.info(" Match [" + m.group() + "] at positions " + m.start() + "-" + (m.end() - 1));
-//					key = m.group().replace(":", "").trim();
-//					log.info(" --- minidao --- 解析参数 --- " + key);
-//				}
-				
-				log.info(method.getGenericReturnType().getTypeName());
-				
-				BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(returnType);
-				
-				if (returnType.isPrimitive()) {
-					if (!CollectionUtils.isEmpty(paramMap)) {
-						return namedParameterJdbcTemplate.query(sql, paramMap, rowMapper);
-					} else {
-						return jdbcTemplate.queryForObject(sql, rowMapper);
-					}
-				} else if (returnType.isAssignableFrom(List.class)) {
-					String className = returnTypeName.substring(returnTypeName.indexOf("<")+1, returnTypeName.indexOf(">"));
-					
-					if (className.indexOf("Map") > 0) {
-						return jdbcTemplate.queryForList(sql, args);
-					}else {
-						BeanPropertyRowMapper<?> beanPropertyRowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
-						if (!CollectionUtils.isEmpty(paramMap)) {
-//							return namedParameterJdbcTemplate.queryForList(sql, paramMap, returnType);
-							return namedParameterJdbcTemplate.query(sql, paramMap, beanPropertyRowMapper);
-						}else {
-							return jdbcTemplate.queryForList(sql, beanPropertyRowMapper);
+			if (className.indexOf("Map") > 0) {
+				return jdbcTemplate.queryForList(sql, args);
+			}else {
+				BeanPropertyRowMapper<?> beanPropertyRowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
+				if (method.isAnnotationPresent(Paging.class)) {
+					String pageNo = "";
+					String pageSize = "";
+					Parameter[] parameters = method.getParameters();
+					for (int i=0; i<parameters.length; i++) {
+						if (parameters[i].isAnnotationPresent(MyParam.class)) {
+							String page = parameters[i].getAnnotation(MyParam.class).value();
+							if ("pageNo".equals(page)) {
+								pageNo = (String)args[i];
+							}
+							if ("pageSize".equals(page)) {
+								pageSize = (String)args[i];
+							}
 						}
 					}
-				} else {
-					if (!CollectionUtils.isEmpty(paramMap)) {
-						return namedParameterJdbcTemplate.queryForObject(sql, paramMap, rowMapper);
-					}else {
-						return jdbcTemplate.queryForObject(sql, rowMapper);
+					if (StringUtils.isEmpty(pageNo) || StringUtils.isEmpty(pageSize)) {
+						throw new Exception("未指定pageNo或pageSize!");
 					}
+					if (method.isAnnotationPresent(DynamicSql.class)) {
+						if (parameters.length == 2) {
+							sql = MessageFormat.format(method.getAnnotation(DynamicSql.class).value(), pageNo, pageSize);
+						} else {
+							
+						}
+					}
+					return jdbcTemplate.query(sql, beanPropertyRowMapper);
+				} else {
+					String paramName = "";
+					Parameter[] parameters = method.getParameters();
+					for (Parameter parameter : parameters) {
+						if (parameter.isAnnotationPresent(MyParam.class)) {
+							paramName = parameter.getAnnotation(MyParam.class).value();
+						}
+					}
+					Object object = args[0];
+					Field[] fields = args[0].getClass().getDeclaredFields();
+					Map<String, Object> modle = new HashMap<>();
+					for (Field field : fields) {
+						field.setAccessible(true);
+						modle.put(paramName+"."+field.getName(), field.get(object));
+					}
+					log.info("===modle==="+modle);
+					sql = getSql(method, paramMap);
+					log.info("===sql==="+sql);
+					String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+";
+					Pattern compile = Pattern.compile(regEx);
+					Matcher matcher = compile.matcher(sql);
+					while (matcher.find()) {
+						String key = matcher.group().replaceFirst(":", "");
+						paramMap.put(key, modle.get(key));
+					}
+					log.info("===paramMap==="+paramMap);
+					return namedParameterJdbcTemplate.query(sql, paramMap, rowMapper);
 				}
-			} else {
-				sql = getSql(method, paramMap);
 			}
 		} else if (method.isAnnotationPresent(Modify.class)) {
 			if (!CollectionUtils.isEmpty(paramMap)) {
@@ -126,46 +152,15 @@ public class MiniDaoHandler implements InvocationHandler{
 			} else {
 				return jdbcTemplate.update(sql);
 			}
-		} else if (returnType.isAssignableFrom(List.class)) {
-			
-			String typeName = method.getGenericReturnType().getTypeName();
-			String className = typeName.substring(typeName.indexOf("<")+1, typeName.indexOf(">"));
-			
-			if (className.indexOf("Map") > 0) {
-				return jdbcTemplate.queryForList(sql, args);
+		} else {
+			if (!CollectionUtils.isEmpty(paramMap)) {
+				return namedParameterJdbcTemplate.queryForObject(sql, paramMap, rowMapper);
 			}else {
-				String paramName = "";
-				Parameter[] parameters = method.getParameters();
-				for (Parameter parameter : parameters) {
-					if (parameter.isAnnotationPresent(MyParam.class)) {
-						paramName = parameter.getAnnotation(MyParam.class).value();
-					}
-				}
-				Object object = args[0];
-				Field[] fields = args[0].getClass().getDeclaredFields();
-				Map<String, Object> modle = new HashMap<>();
-				for (Field field : fields) {
-					field.setAccessible(true);
-					modle.put(paramName+"."+field.getName(), field.get(object));
-				}
-				log.info("===modle==="+modle);
-				sql = getSql(method, paramMap);
-				log.info("===sql==="+sql);
-				String regEx = ":[ tnx0Bfr]*[0-9a-z.A-Z_]+";
-				Pattern compile = Pattern.compile(regEx);
-				Matcher matcher = compile.matcher(sql);
-				while (matcher.find()) {
-					String key = matcher.group().replaceFirst(":", "");
-					paramMap.put(key, modle.get(key));
-				}
-				log.info("===paramMap==="+paramMap);
-				BeanPropertyRowMapper<?> rowMapper = BeanPropertyRowMapper.newInstance(Class.forName(className));
-				
-				return namedParameterJdbcTemplate.query(sql, paramMap, rowMapper);
+				return jdbcTemplate.queryForObject(sql, rowMapper);
 			}
 		}
+			
 		
-		return jdbcTemplate.queryForObject(sql, returnType);
 	}
 
 	/**

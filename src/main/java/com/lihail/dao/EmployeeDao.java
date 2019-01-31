@@ -6,10 +6,10 @@ import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 import com.lihail.annotation.DynamicSql;
+import com.lihail.annotation.Modify;
 import com.lihail.annotation.MyParam;
 import com.lihail.annotation.Paging;
 import com.lihail.dict.ModifyType;
-import com.lihail.annotation.Modify;
 import com.lihail.entity.EmployeeEntity;
 
 @Repository
@@ -28,8 +28,13 @@ public interface EmployeeDao {
 	
 	List<EmployeeEntity> selectEmployees(@MyParam("employee") EmployeeEntity employeeEntity);
 	
-	@Paging
-	List<EmployeeEntity> selectEmployees(@MyParam("employee") EmployeeEntity employeeEntity, int page, int count);
+	@Paging()
+	@DynamicSql("select * from employee order by id desc limit {0},{1}")
+	List<EmployeeEntity> selectEmployeesByPage(@MyParam("employee") EmployeeEntity employeeEntity, @MyParam("pageNo") String pageNo, @MyParam("pageSize") String pageSize);
+	
+	@Paging()
+	@DynamicSql("select * from employee order by id desc limit {0},{1}")
+	List<EmployeeEntity> selectEmployeesByPage(@MyParam("pageNo") String pageNo, @MyParam("pageSize") String pageSize);
 	
 	@Modify()
 	int update(EmployeeEntity employeeEntity);

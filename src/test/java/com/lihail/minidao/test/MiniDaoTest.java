@@ -1,8 +1,15 @@
 package com.lihail.minidao.test;
 
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
+import org.h2.util.New;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +37,6 @@ public class MiniDaoTest extends AbstractJUnit4SpringContextTests{
 	private EmployeeDao employeeDao;
 	
 	
-	
 	@Test
 	public void testNotNull() throws SQLException {
 		
@@ -39,11 +45,12 @@ public class MiniDaoTest extends AbstractJUnit4SpringContextTests{
 //		System.out.println("====findById===："+employeeDao.findById("8496381811DD4A2084439D3DF01512B6"));
 //		System.out.println("====findEmployeeMaps===："+employeeDao.findEmployeeMaps("scott","25"));
 		
-		EmployeeEntity employeeEntity = new EmployeeEntity();
-		employeeEntity.setAge("20");
-		employeeEntity.setName("scott");
-		System.out.println("====selectEmployees===："+employeeDao.selectEmployees(employeeEntity));
+//		EmployeeEntity employeeEntity = new EmployeeEntity();
+//		employeeEntity.setAge("20");
+//		employeeEntity.setName("scott");
+//		System.out.println("====selectEmployees===："+employeeDao.selectEmployees(employeeEntity));
 		
 //		System.out.println(employeeRepository.findById("8496381811DD4A2084439D3DF01512B6"));
+		System.out.println("====selectEmployeesByPage===："+employeeDao.selectEmployeesByPage("3", "6"));
 	}
 }
