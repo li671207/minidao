@@ -9,7 +9,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import org.h2.util.New;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +17,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lihail.config.DataSourcesConfig;
 import com.lihail.config.JpaConfig;
 import com.lihail.config.MiniDaoConfig;

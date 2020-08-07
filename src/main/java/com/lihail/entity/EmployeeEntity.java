@@ -8,6 +8,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.GenericGenerator;
 
 
+
 @Entity
 @Table(name = "employee")
 public class EmployeeEntity extends BaseEntity{

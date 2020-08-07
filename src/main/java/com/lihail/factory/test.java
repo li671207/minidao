@@ -94,7 +94,7 @@ public class test {
 
 		Writer writer = new OutputStreamWriter(System.out);
 		
-		template.process(map, writer);
+//		template.process(map, writer);
 		
 		writer.flush();
 		writer.close();
